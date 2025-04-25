@@ -3,7 +3,7 @@
 ✅ Minimal setup for running a Telegram bot on Railway.
 
 ## Files
-- `main.py`: Core bot logic
+- `DCESTRANS.py`: Core bot logic
 - `requirements.txt`: Required libraries
 
 ## Setup Instructions

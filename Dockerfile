@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONUNBUFFERED=1
 
 # Start the bot
-CMD ["python", "main.py"]
+CMD ["python", "DCESTRANS.py"]
