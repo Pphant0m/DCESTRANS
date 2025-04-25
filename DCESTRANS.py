@@ -1,6 +1,6 @@
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
@@ -22,6 +22,12 @@ MAIN_MENU = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+def get_date_keyboard():
+    today = datetime.now().date()
+    options = [today + timedelta(days=i) for i in range(3)]
+    buttons = [[d.isoformat() for d in options[:2]], [options[2].isoformat(), "Інша дата"]]
+    return ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+
 # === Обробники ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привіт! Обери дію:", reply_markup=MAIN_MENU)
@@ -29,15 +35,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def choose_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "Внести дані":
-        await update.message.reply_text("Введіть дату поїздки (напр. 2025-04-30):")
+        await update.message.reply_text("Оберіть дату поїздки:", reply_markup=get_date_keyboard())
         return DATE
     await update.message.reply_text("Невідома дія. Спробуйте ще раз.")
     return CHOOSING
 
 async def get_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['date'] = update.message.text.strip()
-    await update.message.reply_text("Місто доставки:")
-    return CITY
+    date_text = update.message.text.strip()
+    if date_text == "Інша дата":
+        await update.message.reply_text("Введіть дату вручну (у форматі YYYY-MM-DD):")
+        return DATE
+
+    try:
+        datetime.strptime(date_text, "%Y-%m-%d")
+        context.user_data['date'] = date_text
+        await update.message.reply_text("Місто доставки:")
+        return CITY
+    except ValueError:
+        await update.message.reply_text("Невірний формат. Введіть ще раз у форматі YYYY-MM-DD:")
+        return DATE
 
 async def get_city(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['city'] = update.message.text
@@ -72,11 +88,9 @@ async def get_package_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_package_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['package_type'] = update.message.text
 
-    # === Формуємо ім’я файлу по даті поїздки ===
     trip_date = context.user_data['date']
     filename = f"{trip_date}.csv"
 
-    # === Чи потрібно створювати файл з заголовками ===
     file_exists = os.path.exists(filename)
     with open(filename, mode='a', encoding='utf-8', newline='') as file:
         writer = csv.writer(file)
@@ -101,11 +115,10 @@ async def get_package_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Дані збережено у таблицю.")
     await update.message.reply_text("Готово! Оберіть наступну дію:", reply_markup=MAIN_MENU)
 
-    # === Надсилаємо таблицю адміну ===
     await context.bot.send_document(
         chat_id=ADMIN_CHAT_ID,
         document=open(filename, "rb"),
-        caption=f"📦 Дані по рейсу {trip_date}"
+        caption=f"\ud83d\udce6 Дані по рейсу {trip_date}"
     )
 
     return CHOOSING
@@ -132,5 +145,5 @@ if __name__ == "__main__":
 
     app.add_handler(conv_handler)
 
-    print("🟢 Shipment Bot is running with daily CSV export...")
+    print("\ud83d\udfe2 Shipment Bot is running with daily CSV export and date buttons...")
     app.run_polling()
