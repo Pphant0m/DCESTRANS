@@ -145,5 +145,5 @@ if __name__ == "__main__":
 
     app.add_handler(conv_handler)
 
-    print("\ud83d\udfe2 Shipment Bot is running with daily CSV export and date buttons...")
+    print("🟢 Shipment Bot is running with daily CSV export and date buttons...")
     app.run_polling()
